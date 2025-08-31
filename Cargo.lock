@@ -8614,6 +8614,7 @@ dependencies = [
  "clap",
  "derive_more",
  "eyre",
+ "futures",
  "hex",
  "indicatif",
  "libc",

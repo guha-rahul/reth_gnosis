@@ -96,6 +96,7 @@ tokio = "1"
 anyhow = "1.0.98"
 indicatif = "0.17"
 zstd = "0.12"
+futures = "0.3.31"
 
 [target.'cfg(unix)'.dependencies]
 tikv-jemalloc-ctl = "0.6"
