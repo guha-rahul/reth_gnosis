@@ -20,7 +20,7 @@ where
 
     // Validation toggles
     let address_only = std::env::var("HOPR_ONLY").ok().as_deref() == Some("1");
-    info!(target: "deposit-indexer", address_only, "deposit-indexer active");
+    info!(target: "hopr-indexer", address_only, "hopr-indexer active");
 
     while let Some(notification) = ctx.notifications.try_next().await? {
         if let ExExNotification::ChainCommitted { new } = &notification {
@@ -36,7 +36,7 @@ where
                             block_matches += 1;
                             if let Ok(evt) = ChannelBalanceDecreased::decode_raw_log(log.topics(), &log.data.data) {
                                 info!(
-                                    target: "deposit-indexer",
+                                    target: "hopr-indexer",
                                     block = n,
                                     tx = %tx.hash(),
                                     channel_id = %hex::encode(evt.channelId.as_slice()),
@@ -45,7 +45,7 @@ where
                                 );
                             } else {
                                 info!(
-                                    target: "deposit-indexer",
+                                    target: "hopr-indexer",
                                     block = n,
                                     tx = %tx.hash(),
                                     data = %hex::encode(&log.data.data),
@@ -57,10 +57,10 @@ where
                 }
                 if block_matches > 0 {
                     total_in_block += block_matches;
-                    info!(target: "deposit-indexer", block = n, matched = block_matches, "Block matched ChannelBalanceDecreased logs");
+                    info!(target: "hopr-indexer", block = n, matched = block_matches, "Block matched ChannelBalanceDecreased logs");
                 }
             }
-            if total_in_block == 0 { info!(target: "deposit-indexer", "No matches in committed batch"); }
+            if total_in_block == 0 { info!(target: "hopr-indexer", "No matches in committed batch"); }
             ctx.events.send(ExExEvent::FinishedHeight(new.tip().num_hash()))?;
         }
     }
