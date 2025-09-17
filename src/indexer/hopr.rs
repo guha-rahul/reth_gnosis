@@ -39,7 +39,6 @@ use crate::indexer::hopr_events::{
     // Node safe registry
     RegisteredNodeSafe,
     DergisteredNodeSafe,
-    NodeSafeDomainSeparatorUpdated,
     // Oracles
     TicketPriceUpdated,
     WinProbUpdated,
@@ -73,14 +72,11 @@ where
     // Node safe registry
     let t_reg_node_safe: B256 = RegisteredNodeSafe::SIGNATURE_HASH;
     let t_derg_node_safe: B256 = DergisteredNodeSafe::SIGNATURE_HASH;
-    let t_nodesafe_dom_updated: B256 = NodeSafeDomainSeparatorUpdated::SIGNATURE_HASH;
     // Oracles
     let t_ticket_price_updated: B256 = TicketPriceUpdated::SIGNATURE_HASH;
     let t_win_prob_updated: B256 = WinProbUpdated::SIGNATURE_HASH;
 
-    // Validation toggles
-    let address_only = std::env::var("HOPR_ONLY").ok().as_deref() == Some("1");
-    info!(target: "hopr-indexer", address_only, "hopr-indexer active");
+    info!(target: "hopr-indexer", "hopr-indexer active");
 
     while let Some(notification) = ctx.notifications.try_next().await? {
         if let ExExNotification::ChainCommitted { new } = &notification {
@@ -89,99 +85,62 @@ where
                 let n = block.num_hash().number as u64;
 
                 let mut block_matches = 0usize;
-                for (tx, receipt) in block.body().transactions().zip(receipts.iter()) {
+                for (_tx, receipt) in block.body().transactions().zip(receipts.iter()) {
                     for log in &receipt.logs {
                         // Channels contract events
                         if log.address == CHANNEL_CONTRACT_ADDR {
                             let topics = log.topics();
                             let topic0 = topics.first().copied();
 
-                            if address_only {
-                                block_matches += 1;
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "HOPR log (address-only)");
-                                continue;
-                            }
-
                             if topic0 == Some(t_bal_dec) {
                                 block_matches += 1;
-                                if let Ok(evt) = ChannelBalanceDecreased::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), src = %evt.src, dest = %evt.dest, amount = %evt.amount, "ChannelBalanceDecreased");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "ChannelBalanceDecreased");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "ChannelBalanceDecreased");
                                 continue;
                             }
 
                             if topic0 == Some(t_bal_inc) {
                                 block_matches += 1;
-                                if let Ok(evt) = ChannelBalanceIncreased::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), src = %evt.src, dest = %evt.dest, amount = %evt.amount, "ChannelBalanceIncreased");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "ChannelBalanceIncreased");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "ChannelBalanceIncreased");
                                 continue;
                             }
 
                             if topic0 == Some(t_opened) {
                                 block_matches += 1;
-                                if let Ok(evt) = ChannelOpened::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), src = %evt.src, dest = %evt.dest, "ChannelOpened");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "ChannelOpened");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "ChannelOpened");
                                 continue;
                             }
 
                             if topic0 == Some(t_closed) {
                                 block_matches += 1;
-                                if let Ok(evt) = ChannelClosed::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), src = %evt.src, dest = %evt.dest, "ChannelClosed");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "ChannelClosed");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "ChannelClosed");
                                 continue;
                             }
 
                             if topic0 == Some(t_close_init) {
                                 block_matches += 1;
-                                if let Ok(evt) = OutgoingChannelClosureInitiated::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), src = %evt.src, dest = %evt.dest, closureInitiationTime = %evt.closureInitiationTime, "OutgoingChannelClosureInitiated");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "OutgoingChannelClosureInitiated");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "OutgoingChannelClosureInitiated");
                                 continue;
                             }
 
                             if topic0 == Some(t_dom) {
                                 block_matches += 1;
-                                if let Ok(evt) = DomainSeparatorUpdated::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), newDomainSeparator = %hex::encode(evt.newDomainSeparator.as_slice()), "DomainSeparatorUpdated");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "DomainSeparatorUpdated");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "DomainSeparatorUpdated");
                                 continue;
                             }
 
                             if topic0 == Some(t_ledger_dom) {
                                 block_matches += 1;
-                                if let Ok(evt) = LedgerDomainSeparatorUpdated::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), newLedgerDomainSeparator = %hex::encode(evt.newLedgerDomainSeparator.as_slice()), "LedgerDomainSeparatorUpdated");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "LedgerDomainSeparatorUpdated");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "LedgerDomainSeparatorUpdated");
                                 continue;
                             }
 
                             if topic0 == Some(t_ticket) {
                                 block_matches += 1;
-                                if let Ok(evt) = TicketRedeemed::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), src = %evt.src, dest = %evt.dest, amount = %evt.amount, ticketEpoch = %evt.ticketEpoch, ticketIndex = %evt.ticketIndex, "TicketRedeemed");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "TicketRedeemed");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "TicketRedeemed");
                                 continue;
                             }
 
+                            // if none matched, ignore
                             continue;
                         }
 
@@ -189,41 +148,22 @@ where
                         if log.address == ANNOUNCEMENTS {
                             let topics = log.topics();
                             let topic0 = topics.first().copied();
-                            if address_only {
-                                block_matches += 1;
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "Announcements (address-only)");
-                                continue;
-                            }
                             if topic0 == Some(t_addr_announce) {
                                 block_matches += 1;
-                                if let Ok(evt) = AddressAnnouncement::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), account = %evt.account, pk_len = evt.publicKey.len(), maddr_len = evt.multiaddr.len(), "AddressAnnouncement");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "AddressAnnouncement");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "AddressAnnouncement");
                                 continue;
                             }
                             if topic0 == Some(t_key_binding) {
                                 block_matches += 1;
-                                if let Ok(evt) = KeyBinding::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), account = %evt.account, "KeyBinding");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "KeyBinding");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "KeyBinding");
                                 continue;
                             }
                             if topic0 == Some(t_revoke_announce) {
                                 block_matches += 1;
-                                if let Ok(evt) = RevokeAnnouncement::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), account = %evt.account, "RevokeAnnouncement");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "RevokeAnnouncement");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "RevokeAnnouncement");
                                 continue;
                             }
-                            // Fallback if unknown announcement event
-                            block_matches += 1;
-                            info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "Announcements");
+                            // ignore others on this address
                             continue;
                         }
 
@@ -231,77 +171,42 @@ where
                         if log.address == NETWORK_REGISTRY {
                             let topics = log.topics();
                             let topic0 = topics.first().copied();
-                            if address_only {
-                                block_matches += 1;
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "NetworkRegistry (address-only)");
-                                continue;
-                            }
                             if topic0 == Some(t_registered) {
                                 block_matches += 1;
-                                if let Ok(evt) = Registered::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), account = %evt.account, peerId = %evt.peerId, "Registered");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "Registered");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "Registered");
                                 continue;
                             }
                             if topic0 == Some(t_registered_mgr) {
                                 block_matches += 1;
-                                if let Ok(evt) = RegisteredByManager::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), manager = %evt.manager, account = %evt.account, peerId = %evt.peerId, "RegisteredByManager");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "RegisteredByManager");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "RegisteredByManager");
                                 continue;
                             }
                             if topic0 == Some(t_deregistered) {
                                 block_matches += 1;
-                                if let Ok(evt) = Deregistered::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), account = %evt.account, peerId = %evt.peerId, "Deregistered");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "Deregistered");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "Deregistered");
                                 continue;
                             }
                             if topic0 == Some(t_deregistered_mgr) {
                                 block_matches += 1;
-                                if let Ok(evt) = DeregisteredByManager::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), manager = %evt.manager, account = %evt.account, peerId = %evt.peerId, "DeregisteredByManager");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "DeregisteredByManager");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "DeregisteredByManager");
                                 continue;
                             }
                             if topic0 == Some(t_eligibility_updated) {
                                 block_matches += 1;
-                                if let Ok(evt) = EligibilityUpdated::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), account = %evt.account, isEligible = evt.isEligible, rank = %evt.rank, "EligibilityUpdated");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "EligibilityUpdated");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "EligibilityUpdated");
                                 continue;
                             }
                             if topic0 == Some(t_requirement_updated) {
                                 block_matches += 1;
-                                if let Ok(evt) = RequirementUpdated::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), key = %hex::encode(evt.key.as_slice()), value = %evt.value, "RequirementUpdated");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "RequirementUpdated");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "RequirementUpdated");
                                 continue;
                             }
                             if topic0 == Some(t_netreg_status_updated) {
                                 block_matches += 1;
-                                if let Ok(evt) = NetworkRegistryStatusUpdated::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), isPaused = evt.isPaused, "NetworkRegistryStatusUpdated");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "NetworkRegistryStatusUpdated");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "NetworkRegistryStatusUpdated");
                                 continue;
                             }
-                            // Fallback
-                            block_matches += 1;
-                            info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "NetworkRegistry");
+                            // ignore others on this address
                             continue;
                         }
 
@@ -309,41 +214,18 @@ where
                         if log.address == NODE_SAFE_REGISTRY {
                             let topics = log.topics();
                             let topic0 = topics.first().copied();
-                            if address_only {
-                                block_matches += 1;
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "NodeSafeRegistry (address-only)");
-                                continue;
-                            }
                             if topic0 == Some(t_reg_node_safe) {
                                 block_matches += 1;
-                                if let Ok(evt) = RegisteredNodeSafe::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), owner = %evt.owner, safe = %evt.safe, "RegisteredNodeSafe");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "RegisteredNodeSafe");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "RegisteredNodeSafe");
                                 continue;
                             }
                             if topic0 == Some(t_derg_node_safe) {
                                 block_matches += 1;
-                                if let Ok(evt) = DergisteredNodeSafe::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), owner = %evt.owner, safe = %evt.safe, "DergisteredNodeSafe");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "DergisteredNodeSafe");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "DergisteredNodeSafe");
                                 continue;
                             }
-                            if topic0 == Some(t_nodesafe_dom_updated) {
-                                block_matches += 1;
-                                if let Ok(evt) = NodeSafeDomainSeparatorUpdated::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), newDomainSeparator = %hex::encode(evt.newDomainSeparator.as_slice()), "NodeSafeDomainSeparatorUpdated");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "NodeSafeDomainSeparatorUpdated");
-                                }
-                                continue;
-                            }
-                            // Fallback
-                            block_matches += 1;
-                            info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "NodeSafeRegistry");
+                            
+                            // ignore others on this address
                             continue;
                         }
 
@@ -351,119 +233,15 @@ where
                         if log.address == TICKET_PRICE_ORACLE || log.address == WINNING_PROBABILITY_ORACLE {
                             let topics = log.topics();
                             let topic0 = topics.first().copied();
-                            if address_only {
-                                block_matches += 1;
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "Oracle (address-only)");
-                                continue;
-                            }
                             if topic0 == Some(t_ticket_price_updated) {
                                 block_matches += 1;
-                                if let Ok(evt) = TicketPriceUpdated::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), price = %evt.price, "TicketPriceUpdated");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "TicketPriceUpdated");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "TicketPriceUpdated");
                                 continue;
                             }
                             if topic0 == Some(t_win_prob_updated) {
                                 block_matches += 1;
-                                if let Ok(evt) = WinProbUpdated::decode_raw_log(topics, &log.data.data) {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), winProb = %evt.winProb, "WinProbUpdated");
-                                } else {
-                                    info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "WinProbUpdated");
-                                }
+                                info!(target: "hopr-indexer", block = n, data = %hex::encode(&log.data.data), "WinProbUpdated");
                                 continue;
-                            }
-                            // Fallback
-                            block_matches += 1;
-                            info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "Oracle");
-                            continue;
-                        }
-                        let topics = log.topics();
-                        let topic0 = topics.first().copied();
-
-                        if address_only {
-                            block_matches += 1;
-                            info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "HOPR log (address-only)");
-                            continue;
-                        }
-
-                        if topic0 == Some(t_bal_dec) {
-                            block_matches += 1;
-                            if let Ok(evt) = ChannelBalanceDecreased::decode_raw_log(topics, &log.data.data) {
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), src = %evt.src, dest = %evt.dest, amount = %evt.amount, "ChannelBalanceDecreased");
-                            } else {
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "ChannelBalanceDecreased");
-                            }
-                            continue;
-                        }
-
-                        if topic0 == Some(t_bal_inc) {
-                            block_matches += 1;
-                            if let Ok(evt) = ChannelBalanceIncreased::decode_raw_log(topics, &log.data.data) {
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), src = %evt.src, dest = %evt.dest, amount = %evt.amount, "ChannelBalanceIncreased");
-                            } else {
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "ChannelBalanceIncreased");
-                            }
-                            continue;
-                        }
-
-                        if topic0 == Some(t_opened) {
-                            block_matches += 1;
-                            if let Ok(evt) = ChannelOpened::decode_raw_log(topics, &log.data.data) {
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), src = %evt.src, dest = %evt.dest, "ChannelOpened");
-                            } else {
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "ChannelOpened");
-                            }
-                            continue;
-                        }
-
-                        if topic0 == Some(t_closed) {
-                            block_matches += 1;
-                            if let Ok(evt) = ChannelClosed::decode_raw_log(topics, &log.data.data) {
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), src = %evt.src, dest = %evt.dest, "ChannelClosed");
-                            } else {
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "ChannelClosed");
-                            }
-                            continue;
-                        }
-
-                        if topic0 == Some(t_close_init) {
-                            block_matches += 1;
-                            if let Ok(evt) = OutgoingChannelClosureInitiated::decode_raw_log(topics, &log.data.data) {
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), src = %evt.src, dest = %evt.dest, closureInitiationTime = %evt.closureInitiationTime, "OutgoingChannelClosureInitiated");
-                            } else {
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "OutgoingChannelClosureInitiated");
-                            }
-                            continue;
-                        }
-
-                        if topic0 == Some(t_dom) {
-                            block_matches += 1;
-                            if let Ok(evt) = DomainSeparatorUpdated::decode_raw_log(topics, &log.data.data) {
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), newDomainSeparator = %hex::encode(evt.newDomainSeparator.as_slice()), "DomainSeparatorUpdated");
-                            } else {
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "DomainSeparatorUpdated");
-                            }
-                            continue;
-                        }
-
-                        if topic0 == Some(t_ledger_dom) {
-                            block_matches += 1;
-                            if let Ok(evt) = LedgerDomainSeparatorUpdated::decode_raw_log(topics, &log.data.data) {
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), newLedgerDomainSeparator = %hex::encode(evt.newLedgerDomainSeparator.as_slice()), "LedgerDomainSeparatorUpdated");
-                            } else {
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "LedgerDomainSeparatorUpdated");
-                            }
-                            continue;
-                        }
-
-                        if topic0 == Some(t_ticket) {
-                            block_matches += 1;
-                            if let Ok(evt) = TicketRedeemed::decode_raw_log(topics, &log.data.data) {
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), src = %evt.src, dest = %evt.dest, amount = %evt.amount, ticketEpoch = %evt.ticketEpoch, ticketIndex = %evt.ticketIndex, "TicketRedeemed");
-                            } else {
-                                info!(target: "hopr-indexer", block = n, tx = %tx.hash(), data = %hex::encode(&log.data.data), "TicketRedeemed");
                             }
                             continue;
                         }
