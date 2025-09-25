@@ -1,5 +1,5 @@
-use alloy_sol_macro::sol;
 use alloy_primitives::{address, Address};
+use alloy_sol_macro::sol;
 
 pub const CHANNEL_CONTRACT_ADDR: Address = address!("0x693Bac5ce61c720dDC68533991Ceb41199D8F8ae");
 
@@ -44,7 +44,8 @@ pub const TICKET_PRICE_ORACLE: Address = address!("0xcA5656Fe6F2d847ACA32cf5f38E
 sol! {
     event TicketPriceUpdated(uint256, uint256);
 }
-pub const WINNING_PROBABILITY_ORACLE: Address = address!("0x7Eb8d762fe794A108e568aD2097562cc5D3A1359");
+pub const WINNING_PROBABILITY_ORACLE: Address =
+    address!("0x7Eb8d762fe794A108e568aD2097562cc5D3A1359");
 sol! {
     event WinProbUpdated(uint56 oldWinProb, uint56 newWinProb);
 }

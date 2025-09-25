@@ -1,9 +1,9 @@
 use clap::{Args, Parser};
 use reth_cli_commands::common::EnvironmentArgs;
+use reth_gnosis::indexer::hopr;
 use reth_gnosis::initialize::download_init_state::{CHIADO_DOWNLOAD_SPEC, GNOSIS_DOWNLOAD_SPEC};
 use reth_gnosis::initialize::import_and_ensure_state::download_and_import_init_state;
 use reth_gnosis::{cli::Cli, spec::gnosis_spec::GnosisChainSpecParser, GnosisNode};
-use reth_gnosis::indexer::hopr;
 
 // We use jemalloc for performance reasons
 #[cfg(all(feature = "jemalloc", unix))]

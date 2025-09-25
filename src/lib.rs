@@ -33,6 +33,7 @@ mod errors;
 mod evm;
 mod evm_config;
 mod gnosis;
+pub mod indexer;
 pub mod initialize;
 mod network;
 mod payload;
@@ -40,7 +41,6 @@ mod payload_builder;
 mod pool;
 pub mod spec;
 mod testing;
-pub mod indexer;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, clap::Args)]
 #[command(next_help_heading = "Gnosis")]
