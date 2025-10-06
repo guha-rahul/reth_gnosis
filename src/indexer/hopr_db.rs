@@ -163,7 +163,7 @@ impl HoprEventsDb {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rusqlite::{OptionalExtension, params};
+    use rusqlite::{params, OptionalExtension};
 
     #[test]
     fn schema_initializes() {
@@ -208,7 +208,8 @@ mod tests {
         assert_eq!(last, 0);
 
         // Update and verify
-        db.update_last_indexed_block(12345).expect("update last indexed block");
+        db.update_last_indexed_block(12345)
+            .expect("update last indexed block");
         let last_updated: i64 = db
             .connection()
             .query_row(
@@ -277,7 +278,10 @@ mod tests {
             "INSERT INTO account (chain_key, packet_key, published_at) VALUES (?1, ?2, 0)",
             params!["0x1111111111111111111111111111111111111111", "0xpk1"],
         );
-        assert!(dup.is_err(), "duplicate (chain_key, packet_key) should fail");
+        assert!(
+            dup.is_err(),
+            "duplicate (chain_key, packet_key) should fail"
+        );
 
         // channel unique channel_id and also (channel_id, epoch)
         db.connection()
@@ -409,7 +413,11 @@ mod tests {
             .expect("insert account for announcement");
         let account_id: i64 = db
             .connection()
-            .query_row("SELECT id FROM account WHERE chain_key = '0xacc'", [], |row| row.get(0))
+            .query_row(
+                "SELECT id FROM account WHERE chain_key = '0xacc'",
+                [],
+                |row| row.get(0),
+            )
             .expect("get account id");
         db.connection()
             .execute(

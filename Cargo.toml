@@ -102,6 +102,8 @@ tokio = "1"
 anyhow = "1.0.98"
 indicatif = "0.17"
 zstd = "0.12"
+tar = "0.4"
+xz2 = "0.1"
 
 [dev-dependencies]
 reth-exex-test-utils = { git = "https://github.com/paradigmxyz/reth", tag = "v1.5.1" }
