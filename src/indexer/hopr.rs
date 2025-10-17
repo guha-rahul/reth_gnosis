@@ -59,8 +59,10 @@ where
         .clone()
         .unwrap_or_chain_default(chain_spec.chain(), datadir_args.clone());
     let hopr_dir = chain_datadir.as_ref().join("hopr_indexer");
+    info!(target: "hopr-indexer", "Creating HOPR indexer directory at: {}", hopr_dir.display());
     fs::create_dir_all(&hopr_dir).wrap_err("failed to create hopr indexer directory")?;
-    let db_path = hopr_dir.join("events.sqlite3");
+    let db_path = hopr_dir.join("hopr_logs.db");
+    info!(target: "hopr-indexer", "Opening HOPR events database at: {}", db_path.display());
     let hopr_db = HoprEventsDb::open(&db_path).wrap_err_with(|| {
         format!(
             "failed to open hopr events database at {}",

@@ -45,19 +45,33 @@ impl SnapshotCreator {
             fs::create_dir_all(parent)?;
         }
 
-        // Get database filename for archive
-        let db_filename = db_path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("hopr_logs.db");
-
         // Create tar.xz archive
         let file = File::create(output_path)?;
         let encoder = XzEncoder::new(file, 6);
         let mut tar = tar::Builder::new(encoder);
 
-        debug!("Adding {} to archive", db_filename);
-        tar.append_path_with_name(db_path, db_filename)?;
+        // Add main database file as hopr_logs.db
+        debug!("Adding database file as hopr_logs.db");
+        tar.append_path_with_name(db_path, "hopr_logs.db")?;
+
+        // Add WAL file if it exists (check both .db-wal and .sqlite3-wal)
+        let wal_path = db_path.parent().unwrap().join(
+            format!("{}-wal", db_path.file_name().unwrap().to_string_lossy())
+        );
+        if wal_path.exists() {
+            debug!("Adding WAL file as hopr_logs.db-wal");
+            tar.append_path_with_name(&wal_path, "hopr_logs.db-wal")?;
+        }
+
+        // Add SHM file if it exists (check both .db-shm and .sqlite3-shm)
+        let shm_path = db_path.parent().unwrap().join(
+            format!("{}-shm", db_path.file_name().unwrap().to_string_lossy())
+        );
+        if shm_path.exists() {
+            debug!("Adding SHM file as hopr_logs.db-shm");
+            tar.append_path_with_name(&shm_path, "hopr_logs.db-shm")?;
+        }
+
         tar.finish()?;
 
         let size = fs::metadata(output_path)?.len();
